@@ -1,0 +1,62 @@
+local datalink={
+	__newindex=function(s,n,d)
+		local n2=infutil.split(s.sendingdata.parents)
+		table.insert(n2,n)
+		s.sendingdata.interlink:send(s.sendingdata.id,infutil.compress("datahost",s.sendingdata.id,"set",s.sendingdata.name,s.sendingdata.pass,n2,d))
+		id,data=s.sendingdata.interlink:receive(1,s.sendingdata.id)
+		data=data or "Communication error."
+		if data~="Set." then error(data) end
+	end,
+	__index=function(s,n)
+		if #s.sendingdata.parents==0 and n=="purge" then
+			return function(s2,n)
+				if s==s2 then
+					s.sendingdata.interlink:send(s.sendingdata.id,infutil.compress("datahost",s.sendingdata.id,"delete",s.sendingdata.name,s.sendingdata.pass))
+					setmetatable(s,{})
+				else
+					return s2[n]
+				end
+			end
+		end
+		local n2=infutil.split(s.sendingdata.parents)
+		table.insert(n2,n)
+		s.sendingdata.interlink:send(s.sendingdata.id,infutil.compress("datahost",s.sendingdata.id,"get",s.sendingdata.name,s.sendingdata.pass,n2))
+		local id,data=s.sendingdata.interlink:receive(1,s.sendingdata.id)
+		if data==nil or data=="Wrong name or password." then
+			data=data or "Communication error."
+			error(data)
+		end
+		local status,data=pcall(infutil.unserialize,data)
+		if not status then
+			error("Unserialization error: "..data)
+		end
+		if type(data)=="table" then
+			data.sendingdata=infutil.split(s.sendingdata)
+			data.sendingdata.parents=n2
+			setmetatable(data,getmetatable(s))
+		end
+		return data
+	end
+}
+function new(id,name,pass)
+	if not snet.open() then
+		error("Could not detect modem.")
+	end
+	
+	local id,name,pass=tonumber(id),tostring(name),tostring(pass)
+	local t={
+		sendingdata={
+			id=id,
+			name=name,
+			pass=pass,
+			parents={},
+			childtable={}
+		}
+	}
+	t.sendingdata.interlink=netapi.new()
+	setmetatable(t,datalink)
+	t.sendingdata.interlink:send(id,infutil.compress("datahost",id,"register",name,pass))
+	local id,data=t.sendingdata.interlink:receive(1,id)
+	if data~="Registered." then error(data or "Communication error") end
+	return t
+end
