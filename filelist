@@ -4,7 +4,6 @@ apis/enc
 apis/infutil
 apis/netapi
 apis/snet
-programs/
-programs/datahost
-programs/nethost
-programs/diskencrypt
+datahost
+nethost
+diskencrypt

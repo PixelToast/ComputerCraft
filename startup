@@ -1,0 +1,6 @@
+for k,v in pairs(fs.list("apis/")) do
+	os.loadAPI(v)
+end
+if fs.exists("startup2") then
+	shell.run("startup2")
+end
