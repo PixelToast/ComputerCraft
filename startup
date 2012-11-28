@@ -1,5 +1,5 @@
 for k,v in pairs(fs.list("apis/")) do
-	os.loadAPI(v)
+	os.loadAPI("apis/"..v)
 end
 if fs.exists("startup2") then
 	shell.run("startup2")
