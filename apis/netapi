@@ -28,7 +28,7 @@ local func={
 		while true do
 			local e, p1, p2, p3 = os.pullEvent()
 			data2=infutil.decompress(p2) or {} -- decompress message
-			if e == "rednet_message" and p1 == self.host and data2[1]=="gotcon" and data2[4]==id then -- check if the id ponged
+			if e == "rednet_message" and p1 == self.host and data2[1]=="gotcon" and data2[2]==id then -- check if the id ponged
 				data=p2
 				break
 			elseif e == "timer" and p1 == timer then
