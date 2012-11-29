@@ -35,9 +35,8 @@ print("Hosting: "..myid)
 
 while true do
 	local param=false
-	local data=false
-	while param==false or param==data do -- make sure a rednet message is valid
-		id,data,dist=rednet.receive()
+	while param==false do -- make sure a rednet message is valid
+		local id,data,dist=rednet.receive()
 		param=infutil.decompress(data)
 	end
 
