@@ -79,7 +79,7 @@ local function wrap(N)
 	return N-(math.floor(N/256)*256)
 end
 
-local function checksum(S)
+function checksum(S)
 	local sum=0
 	for char in string.gmatch(S,".") do
 		math.randomseed(string.byte(char)+sum)
