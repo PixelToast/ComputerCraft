@@ -153,6 +153,18 @@ while true do
 			else
 				send(param[2][1],infutil.compress("nethost",param[2][1],"send",param[2],param[3],param[4],param[5])) -- send data to the next host in the path
 			end
+		elseif param[1]=="satelite" and turtle then
+			if param[2]==sPass then
+				local cfunc=(param[3]=="down" and turtle.down) or (param[3]=="up" and turtle.up)
+				while true do
+					if not cfunc() then
+						sleep(0.25)
+						if not cfunc() then
+							break
+						end
+					end
+				end
+			end
 		end
 	elseif param[1]=="nethost" and param[2]=="ping" then -- receives ping
 		send(id,infutil.compress("netclient","pong")) -- sends pong

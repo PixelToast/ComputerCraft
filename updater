@@ -1,0 +1,29 @@
+local basetree="https://raw.github.com/infinikiller64/ComputerCraft/master/"
+local function get(filename)
+	http.request(basetree..filename)
+	while true do
+		local p={os.pullEvent()}
+		if p[1]=="http_success" then
+			return p[3].readAll()
+		elseif p[1]=="http_failure" then
+			error("could not get file: "..filename)
+		end
+	end
+end
+local list=textutils.unserialize("{"..string.gsub(get("filelist"),"\n",",").."}")
+for k,v in pairs(list) do
+	print("downloading "..v)
+	if fs.exists(v) then
+		fs.delete(v)
+	end
+	if string.sub(v,-1,-1)=="/" then
+		fs.makeDir(v)
+	else
+		local file=fs.open(v,"w")
+		file.write(get(v))
+		file.close()
+	end
+end
+print("Done!")
+sleep(3)
+os.reboot()
