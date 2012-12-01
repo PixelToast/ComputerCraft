@@ -1,0 +1,30 @@
+local disks={}
+for k,v in pairs(snet.sides) do
+	if peripheral.getType(v)=="drive" then
+		if peripheral.call(v,"hasAudio") then
+			table.insert(disks,peripheral.call(v,"getAudioTitle"))
+		end
+	end
+end
+print(infutil.serialize(disks))
+snet.open()
+while true do
+	a,b=rednet.receive()
+	c=infutil.decompress(b)
+	if c then
+		if c[1]=="reqdisks" then
+			print("sending")
+			rednet.send(a,infutil.compress("gotdisks",disks))
+		elseif c[1]=="diskplay" then
+			for k,v in pairs(snet.sides) do
+				if peripheral.getType(v)=="drive" then
+					if peripheral.call(v,"hasAudio") then
+						if c[2]==peripheral.call(v,"getAudioTitle") then
+							peripheral.call(v,"playAudio")
+						end
+					end
+				end
+			end
+		end
+	end
+end

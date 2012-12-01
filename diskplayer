@@ -1,0 +1,148 @@
+snet.open()
+disk={
+	["C418 - 11"]={
+		artist="C418",
+		short="11"
+	},
+	["C418 - 13"]={
+		artist="C418",
+		short="13"
+	},
+	["C418 - cat"]={
+		artist="C418",
+		short="cat"
+	},
+	["C418 - blocks"]={
+		artist="C418",
+		short="blocks"
+	},
+	["C418 - chirp"]={
+		artist="C418",
+		short="chirp"
+	},
+	["C418 - far"]={
+		artist="C418",
+		short="far"
+	},
+	["C418 - mall"]={
+		artist="C418",
+		short="mall"
+	},
+	["C418 - mellohi"]={
+		artist="C418",
+		short="mellohi"
+	},
+	["C418 - stal"]={
+		artist="C418",
+		short="stal"
+	},
+	["C418 - strad"]={
+		artist="C418",
+		short="strad"
+	},
+	["C418 - ward"]={
+		artist="C418",
+		short="ward"
+	},
+	["Valve - Want You Gone"]={
+		artist="Jonothan Culton",
+		short="gone"
+	},
+	["Valve - Still Alive"]={
+		artist="Jonothan Culton",
+		short="alive"
+	},
+	["Valve - Radio Loop"]={
+		artist="Valve",
+		short="radio"
+	},
+}
+list={}
+setmetatable(disk,{__index=function() return {artist="Nothing to see here",short=""} end})
+rednet.broadcast(infutil.compress("reqdisks"))
+do
+	local timer=os.startTimer(1)
+	while true do
+		local p={os.pullEvent()}
+		local p2=infutil.decompress(p[3])
+		if p[1]=="rednet_message" and p2 then
+			if p2[1]=="gotdisks" then
+				for k,v in pairs(p2[2]) do
+					table.insert(list,v)
+				end
+			end
+		elseif p[2]==timer then
+			break
+		end
+	end
+end
+
+print(infutil.serialize(list))
+diskcnt=0
+ms=0
+for k,v in pairs(list) do
+	diskcnt=diskcnt+1
+	if (#disk[v].short)>ms then
+		ms=string.len(disk[v].short)
+	end
+end
+function cRate(N)
+	if N==nil then return "N/A" end
+	sum=0
+	for k,v in pairs(N) do
+		sum=sum+v
+	end
+	return (math.floor((sum/#N)*20)/2).."/10"
+end
+Mx,My=term.getSize()
+Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+chs=math.random(1,diskcnt)
+chs2=1
+function renderchoices()
+	for l1=1,Mx do
+		choice=(disk[list[l1+chs-Cy]] or {short="Error"}).short
+		if l1==Cy then
+			choice="["..choice..string.rep(" ",ms-string.len(choice)).."]  |"
+		else
+			choice=" "..choice..string.rep(" ",ms-string.len(choice)).."   |"
+		end
+		term.setCursorPos(3,l1)
+		write(choice)
+	end
+	term.setCursorPos(9+ms,1)
+	write("Full name: "..(list[chs] or "Error").."\n")
+	term.setCursorPos(9+ms,3)
+	 write("Artist: "..disk[list[chs]].artist.."\n")
+	term.setCursorPos(9+ms,7)
+	write(string.rep("-",Mx-(ms+9)))
+end
+while true do
+	term.clear()
+	renderchoices()
+	typ,key=os.pullEvent("key")
+	if key==28 then
+		if list[chs]=="C418 - stal" then
+			shell.run("clear")
+			term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)-1)
+			write(string.rep("-",23))
+			term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)+1)
+			write(string.rep("-",23))
+			for l1=1,5 do
+				text="|Deploying jazz in "..6-l1.."..|"
+				term.setCursorPos(math.floor(Mx/2)-math.floor((#text)/2),math.floor(My/2))
+				write(text)
+				sleep(1)
+			end
+		end
+		rednet.broadcast(infutil.compress("diskplay",list[chs]))
+	elseif key==208 then
+		chs=chs+1
+	elseif key==200 then
+		chs=chs-1
+	end
+	if chs>diskcnt then
+		chs=1
+	elseif chs<1 then
+		chs=diskcnt
+	end
+end
