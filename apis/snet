@@ -1,6 +1,8 @@
--- Snet, the only thing that is used in my other apis is snet.open
+-- BY INFINIKILLER64 (abc on computercraft.info)
+-- feel free to use with credit
+-- you can use the open,close,and convert functions without credit though
 
-local sides={"right","left","front","back","top","bottom"}
+sides={"right","left","front","back","top","bottom"}
 function open()
 	for l1=1,6 do
 		if peripheral.getType(sides[l1])=="modem" then rednet.open(sides[l1]) return true,sides[l1] end

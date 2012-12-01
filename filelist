@@ -4,6 +4,7 @@
 "apis/infutil"
 "apis/netapi"
 "apis/snet"
+"apis/BigNum"
 "datahost"
 "nethost"
 "diskencrypt"

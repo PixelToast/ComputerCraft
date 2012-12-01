@@ -56,6 +56,18 @@ disk={
 		artist="Valve",
 		short="radio"
 	},
+	["pg.wantyougone"]={
+		artist="Jonothan Culton",
+		short="gone"
+	},
+	["pg.stillalive"]={
+		artist="Jonothan Culton",
+		short="alive"
+	},
+	["pg.radioloop"]={
+		artist="Valve",
+		short="radio"
+	},
 }
 list={}
 setmetatable(disk,{__index=function() return {artist="Nothing to see here",short=""} end})
