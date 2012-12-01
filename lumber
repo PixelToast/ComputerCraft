@@ -4,7 +4,7 @@ while turtle.detectUp() do
 	while not turtle.digUp() do end
 	while not turtle.up() do end
 end
-while not turtle.detectDown() do'
+while not turtle.detectDown() do
 	turtle.down()
 end
 turtle.back()
