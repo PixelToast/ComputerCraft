@@ -45,11 +45,11 @@ disk={
 		short="ward"
 	},
 	["Valve - Want You Gone"]={
-		artist="Jonothan Culton",
+		artist="Jonathan Culton",
 		short="gone"
 	},
 	["Valve - Still Alive"]={
-		artist="Jonothan Culton",
+		artist="Jonathan Culton",
 		short="alive"
 	},
 	["Valve - Radio Loop"]={
@@ -57,11 +57,11 @@ disk={
 		short="radio"
 	},
 	["pg.wantyougone"]={
-		artist="Jonothan Culton",
+		artist="Jonathan Culton",
 		short="gone"
 	},
 	["pg.stillalive"]={
-		artist="Jonothan Culton",
+		artist="Jonathan Culton",
 		short="alive"
 	},
 	["pg.radioloop"]={
@@ -106,55 +106,84 @@ function cRate(N)
 	end
 	return (math.floor((sum/#N)*20)/2).."/10"
 end
-Mx,My=term.getSize()
-Cx,Cy=math.floor(Mx/2),math.floor(My/2)
 chs=math.random(1,diskcnt)
 chs2=1
-function renderchoices()
-	for l1=1,Mx do
-		choice=(disk[list[l1+chs-Cy]] or {short="Error"}).short
-		if l1==Cy then
-			choice="["..choice..string.rep(" ",ms-string.len(choice)).."]  |"
-		else
-			choice=" "..choice..string.rep(" ",ms-string.len(choice)).."   |"
-		end
-		term.setCursorPos(3,l1)
-		write(choice)
-	end
-	term.setCursorPos(9+ms,1)
-	write("Full name: "..(list[chs] or "Error").."\n")
-	term.setCursorPos(9+ms,3)
-	 write("Artist: "..disk[list[chs]].artist.."\n")
-	term.setCursorPos(9+ms,7)
-	write(string.rep("-",Mx-(ms+9)))
-end
-while true do
-	term.clear()
-	renderchoices()
-	typ,key=os.pullEvent("key")
-	if key==28 then
-		if list[chs]=="C418 - stal" then
-			shell.run("clear")
-			term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)-1)
-			write(string.rep("-",23))
-			term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)+1)
-			write(string.rep("-",23))
-			for l1=1,5 do
-				text="|Deploying jazz in "..6-l1.."..|"
-				term.setCursorPos(math.floor(Mx/2)-math.floor((#text)/2),math.floor(My/2))
-				write(text)
-				sleep(1)
+local send=false
+function main()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	local function renderchoices()
+		for l1=1,Mx do
+			choice=(disk[list[l1+chs-Cy]] or {short="Error"}).short
+			if l1==Cy then
+				choice="["..choice..string.rep(" ",ms-string.len(choice)).."]  |"
+			else
+				choice=" "..choice..string.rep(" ",ms-string.len(choice)).."   |"
 			end
+			term.setCursorPos(3,l1)
+			write(choice)
 		end
-		rednet.broadcast(infutil.compress("diskplay",list[chs]))
-	elseif key==208 then
-		chs=chs+1
-	elseif key==200 then
-		chs=chs-1
+		term.setCursorPos(9+ms,1)
+		write("Full name: "..(list[chs] or "Error").."\n")
+		term.setCursorPos(9+ms,3)
+		write("Artist: "..disk[list[chs]].artist.."\n")
+		term.setCursorPos(9+ms,7)
+		write(string.rep("-",Mx-(ms+9)))
 	end
-	if chs>diskcnt then
-		chs=1
-	elseif chs<1 then
-		chs=diskcnt
+	while true do
+		term.clear()
+		renderchoices()
+		typ,key=os.pullEvent("key")
+		if key==28 then
+			if list[chs]=="C418 - stal" then
+				shell.run("clear")
+				term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)-1)
+				write(string.rep("-",23))
+				term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)+1)
+				write(string.rep("-",23))
+				for l1=1,5 do
+					text="|Deploying jazz in "..6-l1.."..|"
+					term.setCursorPos(math.floor(Mx/2)-math.floor((#text)/2),math.floor(My/2))
+					write(text)
+					sleep(1)
+				end
+			end
+			if send then
+				rednet.broadcast(infutil.compress("diskplay",list[chs]))
+			end
+		elseif key==208 then
+			chs=chs+1
+		elseif key==200 then
+			chs=chs-1
+		end
+		if chs>diskcnt then
+			chs=1
+		elseif chs<1 then
+			chs=diskcnt
+		end
 	end
+end
+local monside=nil
+for k,v in pairs(snet.sides) do
+	if peripheral.getType(v)=="monitor" then
+		monside=v
+		break
+	end
+end
+do
+	local a=coroutine.create(main)
+	local b=coroutine.create(main)
+	local p={}
+    while true do
+    	send=true
+		coroutine.resume(a,unpack(p))
+		if monside then
+			send=false
+			local monitor=peripheral.wrap(monside)
+			term.redirect(monitor)
+			coroutine.resume(b,unpack(p))
+			term.restore()
+		end
+    	p={os.pullEvent("key")}
+    end
 end
