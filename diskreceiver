@@ -1,30 +1,39 @@
-local disks={}
-for k,v in pairs(snet.sides) do
-	if peripheral.getType(v)=="drive" then
-		if peripheral.call(v,"hasAudio") then
-			table.insert(disks,peripheral.call(v,"getAudioTitle"))
-		end
-	end
-end
-print(infutil.serialize(disks))
 snet.open()
+
+if peripheral.call("front","hasAudio") then
+	turtle.suck()
+end
+local slots={}
+local disks={}
+print("indexing...")
+for l1=1,16 do
+	turtle.select(l1)
+	turtle.drop()
+	if peripheral.call("front","hasAudio") then
+		slots[peripheral.call("front","getAudioTitle")]=l1
+		table.insert(disks,peripheral.call("front","getAudioTitle"))
+	end
+	turtle.suck()
+end
+print("done!")
+print(infutil.serialize(disks))
 while true do
-	a,b=rednet.receive()
-	c=infutil.decompress(b)
-	if c then
-		if c[1]=="reqdisks" then
-			print("sending")
-			rednet.send(a,infutil.compress("gotdisks",disks))
-		elseif c[1]=="diskplay" then
-			for k,v in pairs(snet.sides) do
-				if peripheral.getType(v)=="drive" then
-					if peripheral.call(v,"hasAudio") then
-						if c[2]==peripheral.call(v,"getAudioTitle") then
-							peripheral.call(v,"playAudio")
-						end
-					end
-				end
-			end
+	local a,b,c
+	while not c do
+		a,b=rednet.receive()
+		c=infutil.decompress(b)
+	end
+	if c[1]=="diskplay" then
+		if peripheral.call("front","hasAudio") then
+			turtle.select(slots[peripheral.call("front","getAudioTitle")])
+			turtle.suck()
 		end
+		if slots[c[2]] then
+			turtle.select(slots[c[2]])
+			turtle.drop()
+			peripheral.call("front","playAudio")
+		end
+	elseif c[1]=="reqdisks" then
+		rednet.send(a,infutil.compress("gotdisks",disks))
 	end
 end
