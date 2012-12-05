@@ -1,84 +1,107 @@
 snet.open()
 disk={
 	["C418 - 11"]={
+		len=67,
 		artist="C418",
 		short="11"
 	},
 	["C418 - 13"]={
+		len=122,
 		artist="C418",
 		short="13"
 	},
 	["C418 - cat"]={
+		len=147,
 		artist="C418",
 		short="cat"
 	},
 	["C418 - blocks"]={
+		len=295,
 		artist="C418",
 		short="blocks"
 	},
 	["C418 - chirp"]={
+		len=157,
 		artist="C418",
 		short="chirp"
 	},
 	["C418 - far"]={
+		len=146,
 		artist="C418",
 		short="far"
 	},
 	["C418 - mall"]={
+		len=163,
 		artist="C418",
 		short="mall"
 	},
 	["C418 - mellohi"]={
+		len=75,
 		artist="C418",
 		short="mellohi"
 	},
 	["C418 - stal"]={
+		len=134,
 		artist="C418",
 		short="stal"
 	},
 	["C418 - strad"]={
+		len=278,
 		artist="C418",
 		short="strad"
 	},
 	["C418 - ward"]={
+		len=227,
 		artist="C418",
 		short="ward"
 	},
+	["C418 - wait"]={
+		len=210,
+		artist="C418",
+		short="wait"
+	},
 	["wait"]={
+		len=210,
 		real="C418 - wait",
 		artist="C418",
 		short="wait"
 	},
 	["Valve - Want You Gone"]={
+		len=130,
 		artist="Jonathan Culton",
 		short="gone"
 	},
 	["Valve - Still Alive"]={
+		len=170,
 		artist="Jonathan Culton",
 		short="alive"
 	},
 	["Valve - Radio Loop"]={
+		len=18,
 		artist="Valve",
 		short="radio"
 	},
 	["pg.wantyougone"]={
+		len=130,
 		real="Valve - Want You Gone",
 		artist="Jonathan Culton",
 		short="gone"
 	},
 	["pg.stillalive"]={
+		len=170,
 		real="Valve - Still Alive",
 		artist="Jonathan Culton",
 		short="alive"
 	},
 	["pg.radioloop"]={
+		len=18,
 		real="Valve - Radio Loop",
 		artist="Valve",
 		short="radio"
 	},
 }
 list={}
-setmetatable(disk,{__index=function() return {artist="Nothing to see here",short=""} end})
+setmetatable(disk,{__index=function(s,n) return {artist="Error",short="",len=0} end})
 rednet.broadcast(infutil.compress("reqdisks"))
 do
 	local timer=os.startTimer(1)
@@ -122,21 +145,17 @@ local function renderchoices()
 	for l1=1,Mx do
 		local choice=disk[list[l1+chs-Cy]].short or "Error"
 		if l1==Cy then
-			choice="["..choice..string.rep(" ",ms-string.len(choice)).."]  "
+			choice="["..choice..string.rep(" ",ms-string.len(choice)).."]"
 		else
-			choice=" "..choice..string.rep(" ",ms-string.len(choice)).."   "
+			choice=" "..choice..string.rep(" ",ms-string.len(choice))
 		end
-		term.setCursorPos(ms+7,l1)
-		if term.isColor() then
-			term.setBackgroundColor(colors.cyan)
-			term.write(" ")
-			term.setBackgroundColor(colors.black)
-		else
-			term.write("|")
-		end
+		term.setCursorPos(1,l1)
+		term.write(string.rep(" ",ms+6))
 		term.setCursorPos(3,l1)
 		write(choice)
 	end
+	term.setCursorPos(9+ms,1)
+	term.write(string.rep(" ",Mx-(8+ms)))
 	term.setCursorPos(9+ms,1)
 	local full=nil
 	if not list[chs] then
@@ -148,10 +167,27 @@ local function renderchoices()
 	end
 	write("Full name: "..full.."\n")
 	term.setCursorPos(9+ms,3)
+	term.write(string.rep(" ",Mx-(8+ms)))
+	term.setCursorPos(9+ms,3)
 	write("Artist: "..disk[list[chs]].artist.."\n")
-	term.setCursorPos(8+ms,7)
+end
+local function renderborder()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	for l1=1,Mx do
+		term.setCursorPos(ms+7,l1)
+		if term.isColor() then
+			term.setBackgroundColor(colors.cyan)
+			term.write(" ")
+			term.setBackgroundColor(colors.black)
+		else
+			term.write("|")
+		end
+	end
 	if term.isColor() then
 		term.setBackgroundColor(colors.cyan)
+		term.setCursorPos(8+ms,7)
+		write(string.rep(" ",Mx-(ms+7)))
 		term.write(string.rep(" ",Mx-(ms+7)))
 		term.setBackgroundColor(colors.gray)
 		for l1=1,Mx-8 do
@@ -160,14 +196,61 @@ local function renderchoices()
 		end
 		term.setBackgroundColor(colors.black)
 	else
+		term.setCursorPos(8+ms,7)
 		write(string.rep("-",Mx-(ms+7)))
 	end
 end
-local render=true
+local function renderPd(nm)
+	local maintimer=os.startTimer(disk[nm].len)
+	local udtimer=os.startTimer(1)
+	local progress=0
+	local function render()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		for l1=1,4 do
+			term.setCursorPos(4,Cy+l1-2)
+			term.write("|"..string.rep(" ",Mx-8).."|")
+		end
+		term.setCursorPos(4,Cy-2)
+		term.write(","..string.rep("-",Mx-8)..",")
+		term.setCursorPos(4,Cy+2)
+		term.write("'"..string.rep("-",Mx-8).."'")
+		local txt="Now playing: "..nm
+		term.setCursorPos(Cx-math.floor(#txt/2),Cy-1)
+		term.write(txt)
+		term.setCursorPos(5,Cy+1)
+		term.write(string.rep("=",math.floor((Mx-8)*(progress/disk[nm].len))).."|")
+	end
+	render()
+	while true do
+		p={os.pullEvent()}
+		if p[2]==udtimer then
+			if progress==disk[nm].len then
+				term.clear()
+				renderborder()
+				renderchoices()
+				break
+			end
+			udtimer=os.startTimer(1)
+			progress=progress+1
+			render()
+		end
+	end
+end
 local mon=nil
 for k,v in pairs(snet.sides) do
 	if peripheral.getType(v)=="monitor" then
 		mon=peripheral.wrap(v)
+	end
+end
+term.clear()
+renderchoices()
+renderborder()
+local function wrap()
+	if chs>diskcnt then
+		chs=1
+	elseif chs<1 then
+		chs=diskcnt
 	end
 end
 while true do
@@ -184,45 +267,54 @@ while true do
 		end
 		render=false
 	end
-	typ,key=os.pullEvent("key")
-	if key==28 then
-		if list[chs]=="C418 - stal" then
-			render=true
-			shell.run("clear")
-			if not term.isColor() then
-				term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)-1)
-				write(string.rep("-",23))
-				term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)+1)
-				write(string.rep("-",23))
+	typ,key,dat=os.pullEvent()
+	if typ=="key" then
+		if key==28 then
+			if list[chs]=="C418 - stal" then
+				term.clear()
+				if not term.isColor() then
+					term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)-1)
+					write(string.rep("-",23))
+					term.setCursorPos(math.floor(Mx/2)-11,math.floor(My/2)+1)
+					write(string.rep("-",23))
+				end
+				for l1=1,5 do
+					if term.isColor() then
+						text="Deploying jazz in "..6-l1
+					else
+						text="|Deploying jazz in "..6-l1.."..|"
+					end
+					term.setCursorPos(math.floor(Mx/2)-math.floor((#text)/2),math.floor(My/2))
+					if term.isColor() then
+						term.setBackgroundColor(colors.blue)
+					end
+					write(text)
+					sleep(1)
+					if term.isColor() then
+						term.setBackgroundColor(colors.black)
+					end
+				end
+				term.clear()
+				renderchoices()
+				renderborder()
 			end
-			for l1=1,5 do
-				if term.isColor() then
-					text="Deploying jazz in "..6-l1
-				else
-					text="|Deploying jazz in "..6-l1.."..|"
-				end
-				term.setCursorPos(math.floor(Mx/2)-math.floor((#text)/2),math.floor(My/2))
-				if term.isColor() then
-					term.setBackgroundColor(colors.blue)
-				end
-				write(text)
-				sleep(1)
-				if term.isColor() then
-					term.setBackgroundColor(colors.black)
-				end
+			rednet.broadcast(infutil.compress("diskplay",list[chs]))
+			renderPd(list[chs])
+		elseif key==208 then
+			chs=chs+1
+			wrap()
+			renderchoices()
+		elseif key==200 then
+			chs=chs-1
+			wrap()
+			renderchoices()
+		end
+	elseif typ=="rednet_message" then
+		local c=infutil.decompress(dat)
+		if c then
+			if c[1]=="diskplay" and disk[c[2]].len>0 then
+				renderPd(c[2])
 			end
 		end
-		rednet.broadcast(infutil.compress("diskplay",list[chs]))
-	elseif key==208 then
-		chs=chs+1
-		render=true
-	elseif key==200 then
-		chs=chs-1
-		render=true
-	end
-	if chs>diskcnt then
-		chs=1
-	elseif chs<1 then
-		chs=diskcnt
 	end
 end
