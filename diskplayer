@@ -103,44 +103,6 @@ disk={
 local list={}
 setmetatable(disk,{__index=function(s,n) return {artist="Error",short="",len=0} end})
 rednet.broadcast(infutil.compress("reqdisks"))
-shell.run("clear")
-print("Loading disks...")
-do
-	local timer=os.startTimer(1)
-	while true do
-		local p={os.pullEvent()}
-		local p2=infutil.decompress(p[3])
-		if p[1]=="rednet_message" and p2 then
-			if p2[1]=="gotdisks" then
-				for k,v in pairs(p2[2]) do
-					table.insert(list,v)
-				end
-			end
-		elseif p[2]==timer then
-			break
-		end
-	end
-end
-shell.run("clear")
-print(infutil.serialize(list))
-diskcnt=0
-ms=0
-for k,v in pairs(list) do
-	diskcnt=diskcnt+1
-	if (#disk[v].short)>ms then
-		ms=string.len(disk[v].short)
-	end
-end
-function cRate(N)
-	if N==nil then return "N/A" end
-	sum=0
-	for k,v in pairs(N) do
-		sum=sum+v
-	end
-	return (math.floor((sum/#N)*20)/2).."/10"
-end
-chs=math.random(1,diskcnt)
-chs2=1
 local mon=nil
 for k,v in pairs(snet.sides) do
 	if peripheral.getType(v)=="monitor" then
@@ -154,6 +116,50 @@ local function mrender(func)
 		term.restore()
 	end
 end
+local function renderdswait()
+	term.clear()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	local txt="Waiting for disks."
+	term.setCursorPos(Cx-math.floor(#txt/2),Cy)
+	term.write(txt)
+end
+renderdswait()
+mrender(renderdswait)
+while true do
+	local p={os.pullEvent()}
+	local p2=infutil.decompress(p[3])
+	if p[1]=="rednet_message" and p2 then
+		if p2[1]=="gotdisks" then
+			for k,v in pairs(p2[2]) do
+				table.insert(list,v)
+			end
+			break
+		end
+	end
+end
+function reformat()
+	diskcnt=0
+	ms=0
+	for k,v in pairs(list) do
+		diskcnt=diskcnt+1
+		if (#disk[v].short)>ms then
+			ms=string.len(disk[v].short)
+		end
+	end
+end
+reformat()
+function cRate(N)
+	if N==nil then return "N/A" end
+	sum=0
+	for k,v in pairs(N) do
+		sum=sum+v
+	end
+	return (math.floor((sum/#N)*20)/2).."/10"
+end
+chs=math.random(1,diskcnt)
+chs2=1
+
 local renderchoices
 local renderborder
 local renderPd
@@ -223,7 +229,7 @@ function renderchoices()
 	term.setCursorPos(9+ms,1)
 	term.write(string.rep(" ",Mx-(8+ms)))
 	term.setCursorPos(9+ms,1)
-	local full=nil
+	local full
 	if not list[chs] then
 		full="Unknown"
 	elseif disk[list[chs]].real then
@@ -273,7 +279,6 @@ end
 function renderPd(nm)
 	term.clear()
 	mrender(term.clear)
-	local maintimer=os.startTimer(disk[nm].len)
 	local udtimer=os.startTimer(1)
 	local progress=0
 	local function render()
@@ -299,7 +304,15 @@ function renderPd(nm)
 		if term.isColor() then
 			term.setTextColor(colors.lime)
 		end
-		term.write(nm)
+		local full
+		if not list[chs] then
+			full="Unknown"
+		elseif disk[nm].real then
+			full=disk[nm].real
+		else
+			full=nm
+		end
+		term.write(full)
 		if term.isColor() then
 			term.setTextColor(colors.blue)
 		end
@@ -322,7 +335,7 @@ function renderPd(nm)
 	while true do
 		p={os.pullEvent()}
 		p2=infutil.decompress(p[3])
-		if p[1]=="key" and p[2]==udtimer then
+		if p[2]==udtimer then
 			if math.floor(progress/(disk[nm].len))>=1 then
 				break
 			end
@@ -339,6 +352,10 @@ function renderPd(nm)
 		if p2 and p[1]=="rednet_message" then
 			if p2[1]=="diskstop" then
 				break
+			elseif p2[1]=="diskplay" then
+				udtimer=os.startTimer(1)
+				progress=0
+				nm=p2[2]
 			end
 		end
 	end
@@ -383,6 +400,30 @@ while true do
 			if c[1]=="diskplay" and disk[c[2]].len>0 then
 				renderPd(c[2])
 			end
+		elseif c[1]=="gotdisks" then
+			for k,v in pairs(c[2]) do
+				local exists=false
+				for k,v2 in pairs(list) do
+					if if v==v2 then
+						exists=true
+					end
+				end
+				if not exists then
+					table.insert(list,v)
+				end
+			end
+			reformat()
+			brender()
+		end
+	elseif typ=="mouse_scroll" then
+		if key==-1 then
+			chs=chs+1
+			wrap()
+			brender()
+		elseif key==1 then
+			chs=chs-1
+			wrap()
+			brender()
 		end
 	end
 end

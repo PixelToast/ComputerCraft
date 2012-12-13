@@ -16,6 +16,7 @@ for l1=1,16 do
 	turtle.suck()
 end
 print("done!")
+rednet.broadcast(infutil.compress("gotdisks",disks))
 print(infutil.serialize(disks))
 while true do
 	local a,b,c
@@ -35,5 +36,11 @@ while true do
 		end
 	elseif c[1]=="reqdisks" then
 		rednet.send(a,infutil.compress("gotdisks",disks))
+		print("sending list to "..a)
+	elseif c[1]=="diskstop" then
+		if peripheral.call("front","hasAudio") then
+			turtle.select(slots[peripheral.call("front","getAudioTitle")])
+			turtle.suck()
+		end
 	end
 end

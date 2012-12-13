@@ -1,0 +1,3 @@
+local tArgs={ ... }
+print(infutil.serialize(tArgs))
+lan.wrap(tArgs[1],loadfile(shell.resolveProgram(tArgs[2])))

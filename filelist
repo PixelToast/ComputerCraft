@@ -5,6 +5,7 @@
 "apis/netapi"
 "apis/snet"
 "apis/BigNum"
+"apis/lan"
 "datahost"
 "nethost"
 "diskencrypt"
@@ -13,3 +14,4 @@
 "diskplayer"
 "diskreceiver"
 "lumber"
+"lan"
