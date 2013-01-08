@@ -1,0 +1,202 @@
+devices={}
+local function stripHeader(str)
+	
+end
+function resolveDevice(device) -- TODO: combine with peripheral API
+	if type(device)=="table" then
+		
+	end
+	return peripheral.wrap(device)
+	-- TODO: peripheral cable support
+end
+local sides={"right","left","front","back","top","bottom",[0]="internal"}
+local tSides={}
+for k,v in pairs(sides) do
+	tSides[v]=k
+end
+do
+	local types={["drive"]="disk drive",["cable"]="cable"} -- various peripheral support
+	local pending={"right","left","front","back","top","bottom",{"HDD","internal"}} -- TODO: scan HDD for partitions
+	while #pending>0 do
+		local i=pending[1]
+		if type(i)=="table" then
+			if i[1]=="HDD" then
+				-- TODO: partitions
+				local bootable=0
+				if fs.exists("/.boot/bios.lua") then
+					bootable=1
+				end
+				table.insert(devices,{"hard drive",bootable,i})
+			end
+		elseif type(i)=="string" then
+			local l=peripheral.getType(i)
+			if l then
+				if types[l] then
+					if types[l]=="disk drive" then
+						local p=resolveDevice(i)
+						if p.hasData() then
+							local bootable=0
+							if fs.exists(p.getMountPath.."/.boot/bios.lua") then
+								bootable=1
+							end
+							table.insert(devices,{"disk drive",bootable,i})
+						else
+							table.insert(devices,{"disk drive",0,i})
+						end
+					elseif types[l]=="cable" then
+						local p=resolveDevice(i)
+						local list=p.list()
+						if type(list)=="string" then
+							list={list}
+						end
+						for k,v in pairs(list) do
+							table.insert(pending,v)
+						end
+					end
+				else
+					table.insert(devices,{"unknown device",0,i,l})
+				end
+			end
+		end
+		table.remove(pending,1)
+	end
+end
+local function clear()
+	term.clear()
+	term.setCursorPos(1,1)
+end
+local Mx,My=term.getSize()
+local Cx,Cy=math.floor(Mx/2),math.floor(Mx/2)
+local function renderTop()
+	term.setCursorPos(1,1)
+	term.setBackgroundColor(colors.cyan)
+	term.clearLine()
+	term.setCursorPos(Cx-9,1)
+	term.setTextColor(colors.black)
+	term.write("BIOS configuration")
+end
+local selected=1
+local menuselection=1
+local tabs={"devices","boot","admin","exit"}
+local renderOptionsMenu
+local function renderOptions()
+	menuselection=1
+	selected=((selected-1)%(#tabs))+1
+	term.setCursorPos(1,2)
+	term.setBackgroundColor(colors.blue)
+	term.clearLine()
+	term.setTextColor(colors.blue)
+	term.setBackgroundColor(colors.white)
+	term.setCursorPos(1,3)
+	term.write(string.rep("-",Mx))
+	local cpos=1
+	for l1=1,#tabs do
+		term.setCursorPos(cpos,2)
+		term.setBackgroundColor(colors.blue)
+		term.setTextColor(colors.white)
+		if l1==selected then
+			term.setBackgroundColor(colors.white)
+			term.setTextColor(colors.black)
+		end
+		term.write(tabs[l1])
+		if l1==selected then
+			term.setBackgroundColor(colors.white)
+			term.setCursorPos(cpos-1,3)
+			term.write(string.rep(" ",(#tabs[l1])+2))
+		end
+		cpos=2+cpos+#(tabs[l1])
+	end
+	term.setBackgroundColor(colors.cyan)
+	term.setCursorPos(1,My)
+	term.clearLine()
+	term.setBackgroundColor(colors.black)
+	term.setBackgroundColor(colors.white)
+	for l1=4,My-1 do
+		term.setCursorPos(1,l1)
+		term.clearLine()
+	end
+	term.setBackgroundColor(colors.black)
+	term.setTextColor(colors.white)
+	renderOptionsMenu()
+end
+function renderOptionsMenu()
+	if selected==1 then
+		menuselection=math.min(math.max(menuselection,math.min(#devices-(My-4),1)),1)
+		term.setBackgroundColor(colors.white)
+		for l1=4,My-1 do
+			term.setCursorPos(1,l1)
+			term.clearLine()
+		end
+		term.setTextColor(colors.black)
+		local cnt=4
+		for l1=1,#devices do
+			local device=devices[l1]
+			term.setCursorPos(1,cnt)
+			local location=device[3]
+			if type(device[3])=="table" then
+				location=device[3][2]
+			end
+			term.write(device[1]..((device[1]=="unknown device" and " ("..(device[4] or "unknown")..")") or "").." on "..location)
+			term.setTextColor(colors.blue)
+			term.write((device[2]==1 and " is bootable") or "")
+			term.setTextColor(colors.black)
+			cnt=cnt+1
+			if cnt==My then
+				break
+			end
+		end
+	elseif selected==4 then
+		local selections={"exit without saving","exit"}
+		menuselection=math.max(math.min(menuselection,2),1)
+		for l1=1,2 do
+			term.setBackgroundColor(colors.white)
+			term.setTextColor(colors.black)
+			term.setCursorPos(2,4+l1)
+			if l1==menuselection then
+				term.setBackgroundColor(colors.black)
+				term.setTextColor(colors.white)
+			end
+			term.write(selections[l1])
+		end
+	else
+		term.setBackgroundColor(colors.white)
+		for l1=4,My-1 do
+			term.setCursorPos(1,l1)
+			term.clearLine()
+		end
+	end
+	term.setTextColor(colors.white)
+	term.setBackgroundColor(colors.black)
+end
+clear()
+renderTop()
+renderOptions()
+renderOptionsMenu()
+while true do
+	local p={os.pullEvent()}
+	if p[1]=="key" then
+		if p[2]==keys.right then
+			selected=selected+1
+			renderOptions()
+		elseif p[2]==keys.left then
+			selected=selected-1
+			renderOptions()
+		elseif p[2]==keys.down then
+			menuselection=menuselection+1
+			renderOptionsMenu()
+		elseif p[2]==keys.up then
+			menuselection=menuselection-1
+			renderOptionsMenu()
+		elseif p[2]==keys.enter then
+			if selected==4 then
+				if menuselection==1 then
+					break
+				elseif menuselection==2 then
+					break
+				end
+			end
+		end
+	end
+end
+term.setCursorPos(1,1)
+term.clear()
