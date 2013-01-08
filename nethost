@@ -1,84 +1,93 @@
 shell.run("clear")
 snet.open()
-local tHosts={}
-
-function phst() -- formats things
-	tHosts={}
-	for k,v in pairs(sHosts) do
-		tHosts[v]=true
-	end
-	infutil.savePrefs("hostdata",{sHosts,sPass,sLinks})
+tLinks={}
+function savelinks()
+	file=io.open("netdata","w")
+	file:write(infutil.compress(sLinks,sPass))
+	file:close()
+	phst()
 end
-local function send(id,D) -- sends a message and displays it (for debugging)
+function phst()
+	tLinks={}
+	for k,v in pairs(sLinks) do
+		tLinks[v]=true
+	end
+end
+local function send(id,D)
 	rednet.send(id,D)
 	if id and D then
 		print("Sending "..id..": "..D)
 	end
 end
-
-local sDat=infutil.readPrefs("hostdata") -- load prefs
-if sDat then -- check if the data exists
-	local sHosts,sPass=unpack(sDat)
-	print("Loaded data file.")
+if fs.exists("netdata") then
+	local file=fs.open("netdata","r")
+	d=infutil.decompress(file:readAll())
+	d=d or {}
+	if type(d[1])=="table" and type(d[2])=="string" then
+		print("Loaded data file.")
+		print('"'..d[2]..'"')
+		sLinks,sPass=d[1],d[2]
+		phst()
+	else
+		print("Error loading data file.")
+		error()
+	end
+	file:close()
 else
-	print("Data file not found or corrupt.")
-	write("Password: ") -- ask for network password
+	write("Password: ")
 	sPass=read()
+	print("Locating host...")
+	local cn=netapi.new()
+	if cn then
+		cn:addlink(sPass)
+		sLinks={cn.host}
+	else
+		sLinks={}
+	end
 	shell.run("clear")
-	infutil.savePrefs("hostdata",{{},sPass,{}}) -- save prefs
-	sHosts={}
+	fs.delete("netdata")
+	file=io.open("netdata","w")
+	file:write(infutil.compress(sLinks,sPass))
+	file:close()
 	sLinks={}
 end
-
-myid=os.getComputerID() -- for convenience
+myid=os.getComputerID()
 print("Hosting: "..myid)
-
 while true do
-	local param=false
-	while param==false do -- make sure a rednet message is valid
-		local id,data,dist=rednet.receive()
+	param=false
+	while param==false do
+		id,data,dist=rednet.receive()
 		param=infutil.decompress(data)
 	end
-
 	print(data)
-
-	if param[1]=="nethost" and param[2]==myid then -- make sure its directed twards this program
+	if param[1]=="nethost" and param[2]==myid then
 		table.remove(param,1)
 		table.remove(param,1)
 		param[5]=param[5] or {}
-		
 		if param[1]=="connect" then
 			print(id.."| Connect")
 			param[4]=param[4] or {id}
 			table.insert(param[4],1,myid)
-			if sLinks[param[2]] then -- check if there is a path already generated
-				if #(sLinks[param[2]])==1 then
-					send(param[2],infutil.compress("gotcon",param[3][1],sLinks[param[2]],param[2])) -- send the pong to the recipient
-				else
-					send(sLinks[param[2][1]],infutil.compress("nethost",param[3][1],"gotcon",param[2],param[3],sLinks[param[4]])) -- send the data to the next host in the path
-				end
-			elseif type(param[2])=="string" then -- check if the computers id is a string
-				for k,v in pairs(sHosts) do
-					send(v,infutil.compress("netclient","reqcon",param[4],param[2])) -- ping all links (because it dosent know what the string's alias is)
+			if type(param[2])=="string" then
+				for k,v in pairs(sLinks) do
+					send(v,infutil.compress("netclient","reqcon",param[4],param[2]))
 				end
 			else
-				send(param[2],infutil.compress("netclient","reqcon",param[4],param[2])) -- ping the recipient
+				send(param[2],infutil.compress("netclient","reqcon",param[4],param[2]))
 			end
-			if not sLinks[param[2]] then
-				param[3]=param[3] or {}
-				if #sHosts~=0 and param[3][myid]==nil then
-					param[3][myid]=true
-					for k,v in pairs(sHosts) do
-						if not param[3][v] then
-							send(v,infutil.compress("nethost",v,"connect",param[2],param[3],param[4])) -- send a reqcon to all hosts
-						end
-					end
+			param[3]=param[3] or {}
+			if #sLinks~=0 and param[3][myid]==nil then
+				param[3][myid]=true
+				for k,v in pairs(sLinks) do
+					send(v,infutil.compress("nethost",v,"connect",param[2],param[3],param[4]))
 				end
 			end
-
-		elseif param[1]=="setlink" then -- will set the entire link table
+		elseif param[1]=="setlink" then
 			if param[2]==sPass then
-				sHosts=param[3]
+				sLinks=param[3]
+				file=io.open("netdata","w")
+				file:write(infutil.compress(sLinks,sPass))
+				file:close()
 				phst()
 				send(id,"Set.")
 				print(id.."| Set link")
@@ -86,12 +95,11 @@ while true do
 				send(id,"Bad Password.")
 				print(id.."| Bad Password")
 			end
-		
-		elseif param[1]=="addlink" then -- adds the client to the link table
+		elseif param[1]=="addlink" then
 			if param[2]==sPass then
-				if not tHosts[id] then
-					table.insert(sHosts,param[3])
-					phst()
+				if not tLinks[id] then
+					table.insert(sLinks,param[3])
+					savelinks()
 				end
 				print(id.."| Added link")
 				send(id,"Set.")
@@ -99,43 +107,33 @@ while true do
 				send(id,"Bad Password.")
 				print(id.."| Bad Password")
 			end
-		
-		elseif param[1]=="remlink" then -- removes the client from the link table
+		elseif param[1]=="remlink" then
 			if param[2]==sPass then
-				sHosts={}
-				tHosts[param[3]]=nil
-				phst()
-				print(id.."| Removed link")
+				sLinks={}
+				tLinks[param[3]]=nil
+				for k,v in pairs(tLinks) do
+					if not k==param[2] then
+						table.insert(sLinks,k)
+					end
+				end
+				print(id.."| Added link")
 				send(id,"Set.")
 			else
 				send(id,"Bad Password.")
 				print(id.."| Bad Password")
 			end
-		
-		elseif param[1]=="gotcon" and (param[3] or {})[1]==myid then -- received pong from recipient
-			-- param[2] senders id
-			
+		elseif param[1]=="gotcon" and (param[3] or {})[1]==myid then
 			table.remove(param[3],1)
-			if not tHosts[id] then
-				param[2]=id -- only valid hosts can spoof their id
+			if not tLinks[id] then
+				param[2]=id
 			end
 			if #param[3]==1 then
-				send(param[3][1],infutil.compress("gotcon",param[2],param[4])) -- send the pong to the recipient
+				send(param[3][1],infutil.compress("gotcon",param[2],param[4]))
 			else
-				send(param[3][1],infutil.compress("nethost",param[3][1],"gotcon",param[2],param[3],param[4])) -- send the data to the next host in the path
+				send(param[3][1],infutil.compress("nethost",param[3][1],"gotcon",param[2],param[3],param[4]))
 			end
-			local nTable=infutil.split(param[3])
-			for k,v in pairs(param[3]) do
-				sLinks[nTable[#(param[3])]]=nTable
-				table.remove(nTable)
-			end
-		elseif param[1]=="send" then -- sends across a network using a path
-			-- param[2] the path of hosts to the recipient
-			-- param[3] the message itself
-			-- param[4] the users id
-			-- param[5] the distanse the message has travelled
-			
-			if not tHosts[id] then -- prevent spoofing if the id isnt a registered host
+		elseif param[1]=="send" then
+			if not tLinks[id] then
 				param[4]=id
 				param[5]=0
 			end
@@ -144,29 +142,17 @@ while true do
 			param[5]=param[5]+dist
 			if #param[2]==1 then
 				if type(param[2][1])=="string" then
-					for k,v in pairs(sHosts) do
-						send(v,infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1])) -- send it to all links (because it dosent know what the string's alias is)
+					for k,v in pairs(sLinks) do
+						send(v,infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1]))
 					end
 				else
-					send(param[2][1],infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1])) -- send message to recipient
+					send(param[2][1],infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1]))
 				end
 			else
-				send(param[2][1],infutil.compress("nethost",param[2][1],"send",param[2],param[3],param[4],param[5])) -- send data to the next host in the path
-			end
-		elseif param[1]=="satelite" and turtle then
-			if param[2]==sPass then
-				local cfunc=(param[3]=="down" and turtle.down) or (param[3]=="up" and turtle.up)
-				while true do
-					if not cfunc() then
-						sleep(0.25)
-						if not cfunc() then
-							break
-						end
-					end
-				end
+				send(param[2][1],infutil.compress("nethost",param[2][1],"send",param[2],param[3],param[4],param[5]))
 			end
 		end
-	elseif param[1]=="nethost" and param[2]=="ping" then -- receives ping
-		send(id,infutil.compress("netclient","pong")) -- sends pong
+	elseif param[1]=="nethost" and param[2]=="ping" then
+		send(id,infutil.compress("netclient","pong"))
 	end
 end

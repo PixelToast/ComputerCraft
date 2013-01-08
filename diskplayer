@@ -404,7 +404,7 @@ while true do
 			for k,v in pairs(c[2]) do
 				local exists=false
 				for k,v2 in pairs(list) do
-					if if v==v2 then
+					if v==v2 then
 						exists=true
 					end
 				end
@@ -416,14 +416,8 @@ while true do
 			brender()
 		end
 	elseif typ=="mouse_scroll" then
-		if key==-1 then
-			chs=chs+1
-			wrap()
-			brender()
-		elseif key==1 then
-			chs=chs-1
-			wrap()
-			brender()
-		end
+		chs=chs+key
+		wrap()
+		brender()
 	end
 end

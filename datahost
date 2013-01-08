@@ -110,10 +110,10 @@ while true do
 						local status2,res=pcall(func)
 						if status2 then
 							res=res
-							send(infutil.serialize(res))
+							send(infutil.compress(res))
 							print(id.."|Accesed: "..param[2])
 						else
-							send(infutil.serialize(out))
+							send("Serialization error")
 							print(id.."|Error: "..res)
 						end
 					else
