@@ -48,7 +48,7 @@ local function update()
 	file.close()
 	fs.delete("diskplayer_temp")
 	]]
-	http.request("http://pixeltoast.x64.me/cc/diskplayer")
+	http.request("https://raw.github.com/infinikiller64/ComputerCraft/master/diskplayer")
 	while true do
 		local p={os.pullEvent()}
 		if p[1]=="http_success" then
