@@ -1,0 +1,84 @@
+local Mx,My=term.getSize()
+local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+local function cwrite(txt,line)
+	term.setCursorPos(Cx-math.floor(#txt/2),line or Cy)
+	term.write(txt)
+end
+local r={}
+if not fs.exists(".craftboxui/") then
+	fs.makeDir(".craftboxui/")
+	infutil.savePrefs(".craftboxui/test",{shared={}})
+end
+function r.top(b)
+	term.setBackgroundColor(colors.gray)
+	term.clear()
+	term.setCursorPos(1,1)
+	term.setBackgroundColor(colors.lightBlue)
+	term.clearLine()
+	term.setTextColor(colors.black)
+	cwrite("CCraftBox",1)
+	term.setCursorPos(Mx-1,1)
+	term.setBackgroundColor(colors.red)
+	term.write(" "..(b or "x"))
+end
+function r.main()
+	term.setCursorPos(2,3)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	term.write("[Share Folder]")
+	term.setCursorPos(2,5)
+	term.write("[Items Shared]")
+	term.setCursorPos(2,7)
+	term.write("[Connections]")
+end
+function r.share(txt)
+	r.top("<")
+	term.setCursorPos(2,3)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	term.write(txt)
+	term.setCursorPos(1,4)
+	term.setBackgroundColor(colors.lightGray)
+	term.setTextColor(colors.gray)
+	term.clearLine()
+	term.setCursorPos(1,6)
+	term.clearLine()
+	term.setCursorPos(1,5)
+	term.clearLine()
+end
+local con={{"Lol","Whut1"},{"Lol","Whut2"},{"Lol","Whut3"},{"Lol","Whut4"},{"Lol","Whut5"},{"Lol","Whut6"}}
+r.shared_scr=1
+function r.shared()
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	r.shared_scr=((r.shared.scr-1)%math.max(#con,5))+1
+	for l1=2,2+math.max(#con,5) do
+		term.setCursorPos(1,l1)
+		term.write((con[l1-2] or {})[1])
+	end
+end
+r.top()
+r.main()
+local c="main"
+while true do
+	local p={os.pullEvent()}
+	if c=="main" then
+		if p[1]=="mouse_click" then
+			if p[3]>=Mx-1 and p[4]==1 then
+				break
+			elseif p[3]>=2 and p[3]<=15 and p[4]==3 then
+				r.share("Directory:")
+				local a,fold=pcall(read)
+				if fold~="" and a then
+					r.share("Password:")
+					local pass=read()
+				end
+				r.top()
+				r.main()
+			end
+		end
+	end
+end
+term.setBackgroundColor(colors.black)
+term.setCursorPos(1,1)
+term.clear()
